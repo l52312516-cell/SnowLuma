@@ -287,7 +287,6 @@ describe('onebot/contact-actions / getFriendList', () => {
                 age: 0,
                 sex: 'unknown',
                 level: 0,
-                birthdayYear: 0,
                 birthdayMonth: 2,
                 birthdayDay: 29,
                 country: '中国',
@@ -318,7 +317,6 @@ describe('onebot/contact-actions / getFriendList', () => {
                 age: 0,
                 sex: 'unknown',
                 level: 0,
-                birthday_year: 0,
                 birthday_month: 2,
                 birthday_day: 29,
                 country: '中国',
@@ -333,6 +331,7 @@ describe('onebot/contact-actions / getFriendList', () => {
             },
             ...datalineFriendListEntries(),
         ]);
+        expect(out[0]).not.toHaveProperty('birthday_year');
     });
 
     it.each([false, true])(
@@ -918,6 +917,9 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
                 level: 64,
                 regTime: 1_200_000_000,
                 vipFlag: false,
+                birthdayYear: 2000,
+                birthdayMonth: 3,
+                birthdayDay: 15,
                 svipFlag: true,
                 yearVipFlag: false,
                 vipLevel: 7,
@@ -937,6 +939,9 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
             level: 64,
             reg_time: 1_200_000_000,
             is_qq_vip: false,
+            birthday_year: 2000,
+            birthday_month: 3,
+            birthday_day: 15,
             is_vip: true,
             is_years_vip: false,
             vip_level: 7,
@@ -966,6 +971,9 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
             'city',
             'college',
             'profile_business',
+            'birthday_year',
+            'birthday_month',
+            'birthday_day',
         ]) {
             expect(out).not.toHaveProperty(field);
         }
@@ -1018,6 +1026,19 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
             expect(await getStrangerInfo(bridge, 55555)).not.toHaveProperty('profile_business');
         },
     );
+
+    it('omits only birthday_year when the birth year is hidden', async () => {
+        const bridge = fakeBridge({
+            fetchUserProfile: vi.fn(async () => ({
+                ...makeProfile(55555, 'member'),
+                birthdayMonth: 12,
+                birthdayDay: 31,
+            })),
+        });
+        const out = await getStrangerInfo(bridge, 55555);
+        expect(out).toMatchObject({ birthday_month: 12, birthday_day: 31 });
+        expect(out).not.toHaveProperty('birthday_year');
+    });
 
     it('returns a fetched profile', async () => {
         const bridge = fakeBridge({
@@ -1190,7 +1211,6 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
         const friend = {
             ...makeFriend(77777, 'Grace', 'Project lead'),
             sign: 'Cached Grace signature',
-            birthdayYear: 0,
             birthdayMonth: 2,
             birthdayDay: 29,
             sex: 'female',
@@ -1214,12 +1234,12 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
             }),
             identity: fakeIdentity({ findUserProfile: () => null, findFriend: () => friend }),
         });
-        expect(await getStrangerInfo(bridge, 77777)).toMatchObject({
+        const out = await getStrangerInfo(bridge, 77777);
+        expect(out).toMatchObject({
             user_id: 77777,
             nickname: 'Grace',
             remark: 'Project lead',
             long_nick: 'Cached Grace signature',
-            birthday_year: 0,
             birthday_month: 2,
             birthday_day: 29,
             sex: 'female',
@@ -1239,6 +1259,7 @@ describe('onebot/contact-actions / getStrangerInfo', () => {
             is_years_vip: false,
             vip_level: 0,
         });
+        expect(out).not.toHaveProperty('birthday_year');
     });
 
     it('returns null when neither fetch nor cache produces a profile', async () => {

@@ -82,7 +82,7 @@ function mapFriend(raw: OidbFriend): FriendListPageEntry {
             remark: getString(103) ?? '',
             ...(birthday
                 ? {
-                      birthdayYear: birthday.year,
+                      ...(birthday.year > 0 ? { birthdayYear: birthday.year } : {}),
                       birthdayMonth: birthday.month,
                       birthdayDay: birthday.day,
                   }

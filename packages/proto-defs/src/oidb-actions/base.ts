@@ -192,7 +192,8 @@ export interface OidbSetAdmin {
 //   dev/napcatQQInside/…/proto/oidb/Oidb.0x8FC_2.ts    (body=3, targetName=8)
 export interface OidbRenameMemberBody {
     targetUid?: pb<1, string>;
-    targetName?: pb<8, string>;
+    // Clearing a card requires sending an empty string in field 8 (#620).
+    targetName?: pb_optional<8, string>;
 }
 export interface OidbRenameMember {
     groupUin?: pb<1, uint_32>;
@@ -656,10 +657,13 @@ export interface Oidb0x8a7Resp {
     canAtAll?: pb<6, bool>;
 }
 export interface Oidb0xe17Req {
+    subCommand?: pb_optional<2, uint_32>;
     jsonBody?: pb<3, string>;
 }
 export interface Oidb0xe17Resp {
+    errorCode?: pb<3, uint_32>;
     jsonBody?: pb<4, string>;
+    errorMessage?: pb<5, string>;
 }
 export interface Oidb0x112aProfileInfo {
     tag?: pb<1, uint_32>;

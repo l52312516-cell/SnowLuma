@@ -250,7 +250,7 @@ describe('FetchUserProfile namespace', () => {
     });
 
     it.each(['uin', 'uid'])(
-        'preserves binary birthday and returned zero values via %s',
+        'preserves a hidden-year birthday and returned zero values via %s',
         async (form) => {
             const sender = makeSender({
                 body: {
@@ -271,7 +271,6 @@ describe('FetchUserProfile namespace', () => {
                     ? await FetchUserProfile.invoke(sender, { uin: 10001 })
                     : await FetchUserProfileByUid.invoke(sender, { uid: 'u_test' });
             expect(profile).toMatchObject({
-                birthdayYear: 0,
                 birthdayMonth: 2,
                 birthdayDay: 29,
                 sex: 'unknown',
@@ -279,6 +278,7 @@ describe('FetchUserProfile namespace', () => {
                 level: 0,
                 availableFields: ['sex', 'age', 'level'],
             });
+            expect(profile).not.toHaveProperty('birthdayYear');
         },
     );
 
@@ -388,7 +388,86 @@ describe('FetchUserProfile namespace', () => {
                 uin: 10001,
             });
 
-            for (const name of ['regTime', 'vipFlag', 'yearVipFlag', 'svipFlag', 'vipLevel']) {
+            for (const name of [
+                'regTime',
+                'vipFlag',
+                'yearVipFlag',
+                'svipFlag',
+                'vipLevel',
+                'birthdayYear',
+                'birthdayMonth',
+                'birthdayDay',
+            ]) {
+                expect(profile).not.toHaveProperty(name);
+            }
+        });
+
+        it.each(['uin', 'uid'])(
+            'decodes the birthday bytes-property through the %s request',
+            async (form) => {
+                const sender = makeSender({
+                    body: {
+                        uin: 10001,
+                        uid: 'u_test',
+                        properties: {
+                            bytesProperties: [
+                                { code: 20031, value: new Uint8Array([0x07, 0xd0, 3, 15]) },
+                            ],
+                        },
+                    },
+                });
+                const profile =
+                    form === 'uin'
+                        ? await FetchUserProfile.invoke(sender, { uin: 10001 })
+                        : await FetchUserProfileByUid.invoke(sender, { uid: 'u_test' });
+                expect(profile).toMatchObject({
+                    birthdayYear: 2000,
+                    birthdayMonth: 3,
+                    birthdayDay: 15,
+                });
+            },
+        );
+
+        it.each([
+            [12, 31],
+            [2, 29],
+        ])('keeps a hidden-year birthday %i/%i', async (month, day) => {
+            const sender = makeSender({
+                body: {
+                    uin: 10001,
+                    properties: {
+                        bytesProperties: [
+                            { code: 20031, value: new Uint8Array([0, 0, month, day]) },
+                        ],
+                    },
+                },
+            });
+            const profile = await FetchUserProfile.invoke(sender, { uin: 10001 });
+            expect(profile).toMatchObject({ birthdayMonth: month, birthdayDay: day });
+            expect(profile).not.toHaveProperty('birthdayYear');
+        });
+
+        it.each([
+            ['an unset birthday', [0x07, 0xd0, 0, 0]],
+            ['an all-zero value', [0, 0, 0, 0]],
+            ['an out-of-range month', [0x07, 0xd0, 13, 1]],
+            ['an out-of-range day', [0x07, 0xd0, 1, 32]],
+            ['April 31', [0x07, 0xd0, 4, 31]],
+            ['a leap day in 1900', [0x07, 0x6c, 2, 29]],
+            ['a truncated value', [0x07, 0xd0, 3]],
+            ['an oversized value', [0x07, 0xd0, 3, 15, 0]],
+        ])('leaves the birthday unavailable for %s', async (_case, value) => {
+            const sender = makeSender({
+                body: {
+                    uin: 10001,
+                    properties: {
+                        bytesProperties: [{ code: 20031, value: new Uint8Array(value) }],
+                    },
+                },
+            });
+            const profile = await FetchUserProfile.invoke(sender, { uin: 10001 });
+
+            for (const name of ['birthdayYear', 'birthdayMonth', 'birthdayDay']) {
                 expect(profile).not.toHaveProperty(name);
             }
         });

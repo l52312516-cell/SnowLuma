@@ -155,6 +155,69 @@ describe('FetchFriendListPage namespace', () => {
             });
         });
 
+        it('preserves a hidden-year leap birthday without exposing a year', async () => {
+            const sender = makeSender({
+                friends: [
+                    {
+                        uin: 10001,
+                        additional: [
+                            {
+                                type: 1,
+                                layer1: {
+                                    properties: [
+                                        { code: 20031, value: Uint8Array.from([0, 0, 2, 29]) },
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            });
+            const page = await FetchFriendListPage.invoke(sender, {});
+            const friend = page.entries[0]!.friend;
+            expect(friend).toMatchObject({ birthdayMonth: 2, birthdayDay: 29 });
+            expect(friend).not.toHaveProperty('birthdayYear');
+        });
+
+        it.each([
+            ['missing', undefined],
+            ['empty', []],
+            ['all zero', [0, 0, 0, 0]],
+            ['non-leap February 29', [0x07, 0xe7, 2, 29]],
+            ['April 31', [0x07, 0xe8, 4, 31]],
+            ['invalid month', [0x07, 0xe8, 13, 1]],
+            ['truncated', [0x07, 0xe8, 2]],
+            ['oversized', [0x07, 0xe8, 2, 29, 0]],
+        ])('omits a %s birthday without losing other friend fields', async (_label, value) => {
+            const sender = makeSender({
+                friends: [
+                    {
+                        uin: 10001,
+                        additional: [
+                            {
+                                type: 1,
+                                layer1: {
+                                    properties: [
+                                        { code: 20002, value: Buffer.from('Alice') },
+                                        ...(value === undefined
+                                            ? []
+                                            : [{ code: 20031, value: Uint8Array.from(value) }]),
+                                    ],
+                                },
+                            },
+                        ],
+                    },
+                ],
+            });
+            const page = await FetchFriendListPage.invoke(sender, {});
+            const friend = page.entries[0]!.friend;
+            expect(friend.nickname).toBe('Alice');
+
+            for (const field of ['birthdayYear', 'birthdayMonth', 'birthdayDay']) {
+                expect(friend).not.toHaveProperty(field);
+            }
+        });
+
         it.each([-1, -2147483648])(
             'omits unavailable negative age and level (%i) through the wire codec',
             async (value) => {

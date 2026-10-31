@@ -941,7 +941,7 @@ describe('apis/contacts / categorized friend roster', () => {
             { key: 105, value: 0 },
         ];
         raw.additional![0]!.layer1!.properties!.push(
-            { code: 20031, value: Uint8Array.from([0, 0, 5, 6]) },
+            { code: 20031, value: Uint8Array.from([0x07, 0xd1, 5, 6]) },
             { code: 20016, value: Buffer.from('roster-phone') },
         );
         const { api, rememberFriends } = apiForFriendProfiles([raw], () =>
@@ -970,7 +970,7 @@ describe('apis/contacts / categorized friend roster', () => {
                 nickname: 'Alice',
                 remark: 'Roster remark',
                 categoryId: 7,
-                birthdayYear: 0,
+                birthdayYear: 2001,
                 birthdayMonth: 5,
                 birthdayDay: 6,
                 age: 0,
@@ -984,6 +984,54 @@ describe('apis/contacts / categorized friend roster', () => {
         await expect(api.fetchFriendList({ enrichProfiles: true })).resolves.toEqual(expected);
         expect(rememberFriends).toHaveBeenCalledWith(expected);
     });
+
+    it.each([false, true])(
+        'preserves a hidden-year leap birthday through roster enrichment (categorized=%s)',
+        async (categorized) => {
+            const raw = friend(10001, 0, 'u1', 'Alice');
+            raw.additional![0]!.layer1!.properties!.push({
+                code: 20031,
+                value: Uint8Array.from([0, 0, 2, 29]),
+            });
+            const loadProfile = vi.fn((uin: number) =>
+                userInfoPacket({
+                    body: {
+                        uin,
+                        properties: {
+                            bytesProperties: [
+                                { code: 20031, value: Uint8Array.from([0, 0, 2, 29]) },
+                            ],
+                        },
+                    },
+                }),
+            );
+            const { api, identity } = apiForFriendProfiles([raw], loadProfile);
+
+            try {
+                const roster = categorized
+                    ? (await api.fetchFriendCategories({ enrichProfiles: true })).flatMap(
+                          (group) => group.friends,
+                      )
+                    : await api.fetchFriendList({ enrichProfiles: true });
+                expect(roster).toEqual([
+                    {
+                        uin: 10001,
+                        uid: 'u1',
+                        nickname: 'Alice',
+                        remark: '',
+                        categoryId: 0,
+                        birthdayMonth: 2,
+                        birthdayDay: 29,
+                    },
+                ]);
+                expect(roster[0]).not.toHaveProperty('birthdayYear');
+                expect(identity.friends).toEqual(roster);
+                expect(loadProfile).toHaveBeenCalledOnce();
+            } finally {
+                await identity.close();
+            }
+        },
+    );
 
     it('expires cached profile fields after six hours and keeps caches per account', async () => {
         let now = 1_000;
@@ -1520,5 +1568,14 @@ describe('apis/contacts / invite-card pending application', () => {
         expect(api.getGroupInviteCardSequence(12345)).toBe(778899);
         expect(api.findGroupInviteCardGroupBySequence(778899)).toBe(12345);
         expect(api.findGroupInviteCardGroupBySequence(1)).toBeUndefined();
+    });
+
+    it('requires a group when different groups have the same card sequence', () => {
+        const api = new ContactsApi({ identity: { uin: '10001' } } as any);
+        api.rememberGroupInviteCardSequence(12345, 778899);
+        api.rememberGroupInviteCardSequence(67890, 778899);
+
+        expect(() => api.findGroupInviteCardGroupBySequence(778899)).toThrow('multiple groups');
+        expect(api.findGroupInviteCardGroupBySequence(778899, 67890)).toBe(67890);
     });
 });

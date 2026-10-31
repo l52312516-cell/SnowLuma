@@ -21,9 +21,6 @@ export interface UserProfileInfo {
      *  `FetchStrangerService.cs` confirms `// Level`. */
     level: number;
     /** Public profile fields used to enrich a friend-list row when 0xFD4 omits them. */
-    birthdayYear?: number;
-    birthdayMonth?: number;
-    birthdayDay?: number;
     phoneNum?: string;
     email?: string;
     /** Self-reported profile region; never inferred from birthday or account metadata. */
@@ -36,6 +33,13 @@ export interface UserProfileInfo {
     /** Distinguish returned profile values from legacy defaults (0 / unknown / empty string). */
     availableFields?: ('age' | 'sex' | 'level' | 'sign')[];
     regTime?: number;
+    /**
+     * 生日 — OIDB 0xFE1_2 bytes-property key 20031。
+     * 月日未设置时三项均缺省；出生年份未公开（年份为 0）时仅缺省 birthdayYear。
+     */
+    birthdayYear?: number;
+    birthdayMonth?: number;
+    birthdayDay?: number;
     vipFlag?: boolean;
     yearVipFlag?: boolean;
     svipFlag?: boolean;

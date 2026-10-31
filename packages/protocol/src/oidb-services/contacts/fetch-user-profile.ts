@@ -152,6 +152,22 @@ function applyProfileBusiness(info: UserProfileInfo, bytesMap: Map<number, Uint8
     }
 }
 
+/** Preserve a hidden birth year as unavailable while retaining valid month/day values. */
+export function applyBirthday(info: UserProfileInfo, bytesMap: Map<number, Uint8Array>): void {
+    const birthday = parseBirthday(bytesMap.get(20031));
+
+    if (!birthday) {
+        return;
+    }
+
+    if (birthday.year > 0) {
+        info.birthdayYear = birthday.year;
+    }
+
+    info.birthdayMonth = birthday.month;
+    info.birthdayDay = birthday.day;
+}
+
 /** Apply the public profile fields shared by the UIN and UID request forms. */
 export function applyPublicProfileFields(
     info: UserProfileInfo,
@@ -163,13 +179,7 @@ export function applyPublicProfileFields(
         return bytes ? Buffer.from(bytes).toString('utf8') : '';
     };
 
-    const birthday = parseBirthday(bytesMap.get(20031));
-
-    if (birthday) {
-        info.birthdayYear = birthday.year;
-        info.birthdayMonth = birthday.month;
-        info.birthdayDay = birthday.day;
-    }
+    applyBirthday(info, bytesMap);
 
     const phoneNum = getString(20016).trim();
 

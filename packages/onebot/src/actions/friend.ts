@@ -39,9 +39,18 @@ export const actions = [
                     nickname: { type: 'string', description: '好友昵称' },
                     remark: { type: 'string', description: '好友备注' },
                     long_nick: { type: 'string', description: '个性签名（上游有返回时，可为空）' },
-                    birthday_year: { type: 'integer', description: '生日年份（上游有返回时）' },
-                    birthday_month: { type: 'integer', description: '生日月份（上游有返回时）' },
-                    birthday_day: { type: 'integer', description: '生日日期（上游有返回时）' },
+                    birthday_year: {
+                        type: 'integer',
+                        description: '生日年份，兼容 NapCat；未公开或不可用时省略',
+                    },
+                    birthday_month: {
+                        type: 'integer',
+                        description: '生日月份（1-12），兼容 NapCat；不可用时省略',
+                    },
+                    birthday_day: {
+                        type: 'integer',
+                        description: '生日日期（1-31），兼容 NapCat；不可用时省略',
+                    },
                     age: { type: 'integer', description: '年龄（上游有返回时）' },
                     sex: { type: 'string', description: '性别（male/female/unknown）' },
                     phone_num: { type: 'string', description: '上游返回的电话号码，可能经过脱敏' },
@@ -88,7 +97,7 @@ export const actions = [
         summary: '获取陌生人信息',
         readOnly: true,
         returns:
-            '用户资料，含账号标识、等级别名、自填国家/省份/城市、学校和可用的注册时间、会员信息及 QQ 业务类型、等级和图标。资料未返回时省略对应字段；登录天数暂无可靠来源，不返回占位值。',
+            '用户资料，含账号标识、等级别名、自填国家/省份/城市、学校和可用的注册时间、生日、会员信息及 QQ 业务类型、等级和图标。资料未返回时省略对应字段，出生年份未公开时只省略年份；登录天数暂无可靠来源，不返回占位值。',
         returnsSchema: {
             type: 'object',
             properties: {
@@ -99,9 +108,18 @@ export const actions = [
                 remark: { type: 'string', description: '好友备注；非好友或未设置时为空字符串' },
                 sex: { type: 'string', description: '性别（male/female/unknown）' },
                 age: { type: 'integer', description: '年龄' },
-                birthday_year: { type: 'integer', description: '生日年份（上游有返回时）' },
-                birthday_month: { type: 'integer', description: '生日月份（上游有返回时）' },
-                birthday_day: { type: 'integer', description: '生日日期（上游有返回时）' },
+                birthday_year: {
+                    type: 'integer',
+                    description: '生日年份，兼容 NapCat；未公开或不可用时省略',
+                },
+                birthday_month: {
+                    type: 'integer',
+                    description: '生日月份（1-12），兼容 NapCat；不可用时省略',
+                },
+                birthday_day: {
+                    type: 'integer',
+                    description: '生日日期（1-31），兼容 NapCat；不可用时省略',
+                },
                 phone_num: { type: 'string', description: '上游返回的电话号码，可能经过脱敏' },
                 email: { type: 'string', description: '邮箱（上游有返回时）' },
                 country: { type: 'string', description: '用户自填国家（上游有返回时）' },
